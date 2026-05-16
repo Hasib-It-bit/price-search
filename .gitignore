@@ -1,0 +1,4 @@
+price_list.db
+__pycache__/
+*.pyc
+.env
