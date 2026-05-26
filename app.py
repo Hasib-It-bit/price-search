@@ -216,8 +216,13 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
-        if df[col].dtype == object:
-            df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+        series = df[col]
+        # При дублях pandas возвращает DataFrame — берём первый столбец
+        if isinstance(series, pd.DataFrame):
+            series = series.iloc[:, 0]
+            df[col] = series
+        if series.dtype == object:
+            df[col] = series.apply(lambda x: x.strip() if isinstance(x, str) else x)
             df[col] = df[col].replace(r"^\s*$", pd.NA, regex=True)
     df = df.dropna(how="all")
     if len(df.columns) > 0:
@@ -231,7 +236,18 @@ def read_sheet(xls: pd.ExcelFile, sheet: str) -> pd.DataFrame:
     raw = pd.read_excel(xls, sheet_name=sheet, header=None, dtype=str)
     hr = detect_header_row(raw)
     df = pd.read_excel(xls, sheet_name=sheet, header=hr)
-    df.columns = [str(c).strip() for c in df.columns]
+    # Дедублируем колонки: "Цена", "Цена" → "Цена", "Цена.1"
+    seen: dict[str, int] = {}
+    new_cols: list[str] = []
+    for col in df.columns:
+        col = str(col).strip()
+        if col in seen:
+            seen[col] += 1
+            new_cols.append(f"{col}.{seen[col]}")
+        else:
+            seen[col] = 0
+            new_cols.append(col)
+    df.columns = new_cols
     df = clean_df(df)
     return normalize_columns(df)
 
