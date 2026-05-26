@@ -273,9 +273,11 @@ def highlight(text: str, query: str) -> str:
 def fmt_price(val) -> tuple[str, str]:
     try:
         f = float(val)
-        if f != f:  # NaN check (nan != nan всегда True)
+        if f != f:  # NaN check
             return "—", "td-dash"
-        return f"{f:,.2f}".replace(",", " "), "td-price"
+        # 4 знака после запятой, убираем лишние нули → 0.0039, 0.09, 2.2
+        s = f"{f:.4f}".rstrip("0").rstrip(".")
+        return s, "td-price"
     except (TypeError, ValueError):
         return "—", "td-dash"
 
